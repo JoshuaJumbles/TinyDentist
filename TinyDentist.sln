@@ -1,0 +1,29 @@
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2008
+
+Project("{75A9F45C-2685-23C6-FB9C-10032FB9397A}") = "TinyDentist", "Assembly-CSharp.csproj", "{B0F66E7A-3F94-7F91-B6BB-371C2BB3E32A}"
+EndProject
+Project("{75A9F45C-2685-23C6-FB9C-10032FB9397A}") = "TinyDentist", "Assembly-CSharp-Editor.csproj", "{6AA19E6E-2791-760A-21D7-C9D5CEA01EA3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B0F66E7A-3F94-7F91-B6BB-371C2BB3E32A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B0F66E7A-3F94-7F91-B6BB-371C2BB3E32A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0F66E7A-3F94-7F91-B6BB-371C2BB3E32A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B0F66E7A-3F94-7F91-B6BB-371C2BB3E32A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6AA19E6E-2791-760A-21D7-C9D5CEA01EA3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6AA19E6E-2791-760A-21D7-C9D5CEA01EA3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6AA19E6E-2791-760A-21D7-C9D5CEA01EA3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6AA19E6E-2791-760A-21D7-C9D5CEA01EA3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		StartupItem = Assembly-CSharp.csproj
+	EndGlobalSection
+EndGlobal
