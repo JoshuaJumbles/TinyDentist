@@ -11,7 +11,11 @@ public class GiantHeadBehaviour : MonoBehaviour {
 	public float animSwitchTimeTotal = 5f; 
 	float animSwitchTime = 0f;
 
+	public int debugAnimMouthHeight = -1;
 	GameManager manager;
+
+	public List<SpriteRenderer> eyeOrbs;
+	public Color eyeAngryEndColor = Color.white;
 	// Use this for initialization
 	void Start () {
 		animator = GetComponent<Animator>();
@@ -32,6 +36,13 @@ public class GiantHeadBehaviour : MonoBehaviour {
 		else{
 			
 			
+		}
+
+		foreach(SpriteRenderer eye in eyeOrbs){
+			var val = angerLevel / maxAngerLevel;
+			val = Mathf.Min(1f,val);
+			var clear = new Color(eyeAngryEndColor.r,eyeAngryEndColor.g,eyeAngryEndColor.b,0f);
+			eye.color = Color.Lerp(clear,eyeAngryEndColor,val);
 		}
 		
 	}
@@ -57,7 +68,11 @@ public class GiantHeadBehaviour : MonoBehaviour {
 		animator.SetBool("isAngry",(Random.value < angerChance));
 
 		var val = Random.value;
-		if(val<0.55f){
+
+		if(debugAnimMouthHeight != -1){
+			animator.SetInteger("openSize",debugAnimMouthHeight);
+		}
+		else if(val<0.45f){
 			animator.SetInteger("openSize",0);
 		}else if(val<0.85){
 			animator.SetInteger("openSize",1);

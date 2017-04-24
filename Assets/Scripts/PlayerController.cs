@@ -89,8 +89,11 @@ public class PlayerController : MonoBehaviour {
 
 	bool isGrabQueued = false;
 
+	float downGravityFactor = 1.1f;
+
 	// public float upwardsVelocityForSideRejection = 0.2f;
 	void Start () {
+		Cursor.visible = false;
 		spriteBehaviour = GetComponent<PlayerSpriteBehaviour>();
 		rigidBody = GetComponent<Rigidbody2D>();
 	}
@@ -151,7 +154,9 @@ public class PlayerController : MonoBehaviour {
 
 		if(Input.GetKey(KeyCode.S)){//IsGrounded() && Input.GetKeyDown(KeyCode.S)){
 			DidPressDropThrough();
+			
 		}
+		rigidBody.gravityScale = (Input.GetKey(KeyCode.S)) ?  downGravityFactor : 1f;
 
 		if(Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.LeftShift)){
 			if(playerState == PlayerState.CarryingToothAirborn || playerState == PlayerState.CarryingToothGrounded){
@@ -187,7 +192,7 @@ public class PlayerController : MonoBehaviour {
 		spriteBehaviour.UpdateGraphicsForMotion();
 
 		lastFramePlayerState = playerState;
-		UpdateIgnoredColliders();
+		
 	}
 
 	bool BoundsCheck(){
@@ -223,6 +228,7 @@ public class PlayerController : MonoBehaviour {
 		dropThroughTime -= Time.deltaTime;
 		var colliders = CollidersInContactWithPoints(GroundTestPoints(),groundMask);
 		foreach(Collider2D collider in colliders){
+			
 			AddColliderToIgnoreList(collider);
 		}
 	}
@@ -230,7 +236,7 @@ public class PlayerController : MonoBehaviour {
 	
 	void LateUpdate()
 	{
-		// UpdateIgnoredColliders();
+		UpdateIgnoredColliders();
 	}
 
 	public void UpdatePlayerState(){
@@ -256,15 +262,18 @@ public class PlayerController : MonoBehaviour {
 	void UpdateIgnoredColliders(){
 		var ptList = new List<Vector3>(RoofTestPoints());
 		// if(rigidBody.velocity.y > upwardsVelocityForSideRejection){
-			ptList.AddRange(LeftTestPoints());
-			ptList.AddRange(RightTestPoints());
+		ptList.AddRange(LeftTestPoints());
+		ptList.AddRange(RightTestPoints());
 		// }
 		
 		var colliders = CollidersInContactWithPoints(ptList,groundMask);
 
 		var downwardSimultaneousColliders = CollidersInContactWithPoints(GroundTestPoints(),groundMask);
-		var allHits = (Physics2D.CircleCastAll(transform.position,contactTestLengthSides,Vector2.zero,0f,groundMask,-100,100));
-		debugAllContactedList = new List<Collider2D>(Physics2D.OverlapCircleAll(transform.position,contactTestLengthSides,groundMask,-100,100));
+
+		ptList.AddRange(GroundTestPoints());
+
+		var allHits = (CollidersInContactWithPoints(ptList,groundMask));//Physics2D.CircleCastAll(transform.position,contactTestLengthSides,Vector2.zero,0f,groundMask,-100,100));
+		// debugAllContactedList = new List<Collider2D>(Physics2D.OverlapCircleAll(transform.position,contactTestLengthSides,groundMask,-100,100));
 			
 		foreach(Collider2D ignored in ignoredColliderList){
 			if(downwardSimultaneousColliders.Contains(ignored)){
@@ -289,12 +298,18 @@ public class PlayerController : MonoBehaviour {
 		List<Collider2D> removalList = new List<Collider2D>();
 		foreach(Collider2D possibleFreeCollider in ignoredColliderList){
 			var isFree = true;
-			foreach(RaycastHit2D rayHit in allHits){
-				if(rayHit.collider == possibleFreeCollider){
-					isFree = false;
-					break;
-				}
+			// foreach(RaycastHit2D rayHit in allHits){
+			// 	if(rayHit.collider == possibleFreeCollider){
+			// 		isFree = false;
+			// 		break;
+			// 	}
+			// }
+
+			if(allHits.Contains(possibleFreeCollider)){
+				isFree = false;
+				break;
 			}
+
 			if(isFree){
 				removalList.Add(possibleFreeCollider);
 			}
@@ -308,8 +323,11 @@ public class PlayerController : MonoBehaviour {
 	}
 
 	void AddColliderToIgnoreList(Collider2D collider){
-		SetIgnoreCollisionWithCollider(collider,true);
+		if(!ignoredColliderList.Contains(collider)){
+			SetIgnoreCollisionWithCollider(collider,true);
 		ignoredColliderList.Add(collider);
+		}
+		
 	}
 
 	void SetIgnoreCollisionWithCollider(Collider2D collider, bool shouldIgnore){
@@ -643,6 +661,7 @@ public class PlayerController : MonoBehaviour {
 			dispY = Mathf.Sin(adjustedAngle * Mathf.Deg2Rad);
 			vect = new Vector3(dispX,dispY,0f) * length;
 			pt = transform.position + vect;
+			pt += new Vector3(rigidBody.velocity.x,rigidBody.velocity.y,0f) * Time.smoothDeltaTime;
 			checkPoints.Add(pt);
 
 			var flippedAngle = baseAngle - testAngle;
@@ -650,6 +669,7 @@ public class PlayerController : MonoBehaviour {
 			dispY = Mathf.Sin(flippedAngle * Mathf.Deg2Rad);
 			vect = new Vector3(dispX,dispY,0f) * length;
 			pt = transform.position + vect;
+			pt += new Vector3(rigidBody.velocity.x,rigidBody.velocity.y,0f) * Time.smoothDeltaTime;
 			checkPoints.Add(pt);
 		}
 

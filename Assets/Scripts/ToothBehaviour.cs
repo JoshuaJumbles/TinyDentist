@@ -110,6 +110,9 @@ public class ToothBehaviour : MonoBehaviour {
 	}
 
 	void DidYankOut(){
+
+		animator.SetBool("IsWarningLoose",false);
+		Destroy(animator);
 		armManager.DidYankTooth();
 		head.angerLevel += ((isLooseTooth) ? looseAngerYank : toughAngerYank);
 		gumController.GumSpotOpened(transform);
@@ -117,8 +120,7 @@ public class ToothBehaviour : MonoBehaviour {
 		playerController.DidGrabToothObject(gameObject);
 		toothState = ToothState.Carried;
 
-		animator.SetBool("IsWarningLoose",false);
-
+		
 		rigidBody.constraints = RigidbodyConstraints2D.None;
 
 		transform.position = playerController.TeethCarryPosition();
