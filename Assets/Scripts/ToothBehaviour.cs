@@ -46,6 +46,8 @@ public class ToothBehaviour : MonoBehaviour {
 
 	ArmManager armManager;
 	GameManager manager;
+
+	
 	void Start () {
 		head = GameObject.FindObjectOfType<GiantHeadBehaviour>();
 		playerController = GameObject.FindObjectOfType<PlayerController>();
@@ -140,6 +142,7 @@ public class ToothBehaviour : MonoBehaviour {
 		toothState = ToothState.Free;
 		rigidBody.velocity = Vector3.zero;
 		rigidBody.AddForce(forceVector,ForceMode2D.Impulse);
+		// rigidBody.tim
 
 		var rotationSpeed = Random.Range(throwMinRotationSpeed,throwMaxRotationSpeed);
 		rigidBody.angularVelocity = rotationSpeed * ((Random.value<= 0.5f) ? -1f : 1f);

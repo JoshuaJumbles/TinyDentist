@@ -2,6 +2,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+[System.SerializableAttribute]
+public class SkinHairConfig{
+	public Color skinColor;
+	public List<Color> hairColors;
+}
 public class GiantHeadBehaviour : MonoBehaviour {
 	Animator animator;
 
@@ -16,12 +21,60 @@ public class GiantHeadBehaviour : MonoBehaviour {
 
 	public List<SpriteRenderer> eyeOrbs;
 	public Color eyeAngryEndColor = Color.white;
+
+	// public List<SkinHairConfig> skinHairConfigs = new List<SkinHairConfig>();
+	public List<Color> skinColors;
+	public List<Color> hairColors;
+	public Color skinColor;
+	public Color hairColor;
+	public List<SpriteRenderer> skinSprites = new List<SpriteRenderer>();
+	public List<SpriteRenderer> hairSprites = new List<SpriteRenderer>();
 	// Use this for initialization
+	public float skinSaturationDampen = 0.7f;
+	public float hairHueProxMin = 0f;
 	void Start () {
+		// var chosenSkinConfig = skinHairConfigs[Random.Range(0,skinHairConfigs.Count)];
+		// skinColor = chosenSkinConfig.skinColor;
+		// hairColor = chosenSkinConfig.hairColors[Random.Range(0,chosenSkinConfig.hairColors.Count)];
+		
+		skinColor = skinColors[Random.Range(0,skinColors.Count)];
+		float h,s,v;
+		Color.RGBToHSV(skinColor,out h,out s, out v);
+		skinColor = Color.HSVToRGB(h,s * skinSaturationDampen, v);
+
+		
+
+
+		// print("HairColorTest:");
+		// // var obj = GameObject.FindObjectOfType<PlayerController>();
+		// RandomSkinColor.CheckAllSkinCombos(AdjustedSkinColorSet(),hairColors,hairHueProxMin);
+
+		hairColor = RandomSkinColor.PickColorWithMinDistance(skinColor,hairColors, hairHueProxMin);
+
+
+		foreach(SpriteRenderer sprite in skinSprites){
+			sprite.color = skinColor;
+		}
+
+		foreach(SpriteRenderer sprite in hairSprites){
+			sprite.color = hairColor;
+		}
+
+
 		animator = GetComponent<Animator>();
 		animSwitchTime = animSwitchTimeTotal;
 		manager = GameObject.FindObjectOfType<GameManager>();
 		// animSwitchTime = animator.GetCurrentAnimatorStateInfo
+	}
+
+	public List<Color> AdjustedSkinColorSet(){
+		var adjustedColors = new List<Color>();
+		var color = skinColors[Random.Range(0,skinColors.Count)];
+		float h,s,v;
+		Color.RGBToHSV(color,out h,out s, out v);
+		var adjusted = Color.HSVToRGB(h,s * skinSaturationDampen, v);
+		adjustedColors.Add(adjusted);
+		return adjustedColors;
 	}
 	
 	// Update is called once per frame
@@ -53,13 +106,6 @@ public class GiantHeadBehaviour : MonoBehaviour {
 		animator.SetTrigger("switchAnimTrigger");
 	}
 
-	// void StartPeacefulAnimation(){
-
-	// }
-
-	// void StartBiteAnimation(){
-
-	// }
 
 	public void ChangeAnimParameters(){
 		

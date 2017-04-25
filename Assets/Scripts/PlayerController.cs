@@ -38,6 +38,7 @@ public class PlayerController : MonoBehaviour {
 	public float toothGrabDownRadius = 0.2f;
 
 	public float carryToothRadius = 0.3f;
+	public float yankToothUpCheckDistance = 0.55f;
 
 	PlayerSpriteBehaviour spriteBehaviour;
 
@@ -90,6 +91,7 @@ public class PlayerController : MonoBehaviour {
 	bool isGrabQueued = false;
 
 	float downGravityFactor = 1.1f;
+	public float toothUpGrabJointDistance = 0.6f;
 
 	// public float upwardsVelocityForSideRejection = 0.2f;
 	void Start () {
@@ -209,6 +211,7 @@ public class PlayerController : MonoBehaviour {
 	}
 
 	void Respawn(){
+		isGrabQueued = false;
 		spriteBehaviour.DidRespawn();
 		rollCollider.gameObject.SetActive(true);
 		standCollider.gameObject.SetActive(true);
@@ -342,14 +345,22 @@ public class PlayerController : MonoBehaviour {
 		foreach(ToothBehaviour tooth in teeth){
 			if(tooth.toothState == ToothState.Anchored){
 				var collider = tooth.GetComponentInChildren<Collider2D>();
-				var isColliding = collider.OverlapPoint(transform.position);
-				isColliding = isColliding || collider.OverlapPoint(ToothGrabDownPosition());
-				isColliding = isColliding || collider.OverlapPoint(HairGrabPosition());
-				if(isColliding){
+				if( collider.OverlapPoint(transform.position)){
 					DidDie();
 					return;
 				}
-				continue;
+				if(LayerMask.LayerToName(collider.gameObject.layer) == "TeethTop"){
+					if( collider.OverlapPoint(ToothGrabUpPosition())){
+						DidDie();
+						return;
+					}
+				}
+				if(LayerMask.LayerToName(collider.gameObject.layer) == "Ground"){
+					if( collider.OverlapPoint(ToothGrabDownPosition())){
+						DidDie();
+						return;
+					}					
+				}
 			}
 		}
 	}
@@ -369,7 +380,7 @@ public class PlayerController : MonoBehaviour {
 		spriteBehaviour.DidDie();
 		rollCollider.gameObject.SetActive(false);
 		standCollider.gameObject.SetActive(false);
-		
+		isGrabQueued = false;
 	}
 
 
@@ -399,6 +410,8 @@ public class PlayerController : MonoBehaviour {
 		var colliderList = new List<Collider2D>(  Physics2D.OverlapPointAll(ToothGrabDownPosition(),groundMask,-100,100));
 		colliderList.AddRange( Physics2D.OverlapPointAll(transform.position,groundMask,-100,100));
 		colliderList.AddRange( Physics2D.OverlapPointAll(HairGrabPosition(),groundMask,-100,100));
+		colliderList.AddRange(CollidersInContactWithPoints(LeftTestPoints(),groundMask));
+		colliderList.AddRange(CollidersInContactWithPoints(RightTestPoints(),groundMask));
 		var resultList = new List<Collider2D>();
 		foreach(Collider2D collider in colliderList){
 			if(collider.gameObject.tag == "goldTeeth"){
@@ -414,6 +427,7 @@ public class PlayerController : MonoBehaviour {
 
 	public List<Collider2D> GrabbableTeethOnTop(){
 		var colliderList =  new List<Collider2D>(Physics2D.OverlapPointAll(HairGrabPosition(),topTeethMask,-100,100));
+		colliderList.AddRange(Physics2D.OverlapPointAll(ToothGrabUpPosition(),topTeethMask,-100,100));
 		return colliderList;
 	}
 
@@ -426,10 +440,12 @@ public class PlayerController : MonoBehaviour {
 
 	void DidPressLateralMove(Vector2 targetDirection){
 		//TODO: less abrupt turn
-		if((rigidBody.velocity.x < 0 && targetDirection.x > 0) ||
-			(rigidBody.velocity.x > 0 && targetDirection.x < 0)){
-				rigidBody.velocity = new Vector2(0f,rigidBody.velocity.y);
-				rigidBody.angularVelocity = 0f;
+		if(toothJoint == null && grabJoint == null){
+			if((rigidBody.velocity.x < 0 && targetDirection.x > 0) ||
+				(rigidBody.velocity.x > 0 && targetDirection.x < 0)){
+					rigidBody.velocity = new Vector2(0f,rigidBody.velocity.y);
+					rigidBody.angularVelocity = 0f;
+			}
 		}
 		var speed = 0f;
 		if(IsGrounded()){
@@ -499,20 +515,23 @@ public class PlayerController : MonoBehaviour {
 			return;
 		}
 
-		var grabbableBotTeeth = GrabbableTeethOnBottom();
-		
-		if(grabbableBotTeeth.Count >0){
-			CreateToothGrabDownJoint(grabbableBotTeeth[0]);
-			isGrabQueued = false;
-			return;
-		}
-
 		var grabbableTopTeeth = GrabbableTeethOnTop();
 		if(grabbableTopTeeth.Count > 0){
 			CreateToothGrabUpJoint(grabbableTopTeeth[0]);
 			isGrabQueued = false;
 			return;
 		}
+
+		if(dropThroughTime <= 0f){
+			var grabbableBotTeeth = GrabbableTeethOnBottom();
+			if(grabbableBotTeeth.Count >0){
+				CreateToothGrabDownJoint(grabbableBotTeeth[0]);
+				isGrabQueued = false;
+				return;
+			}
+		}
+		
+
 
 		if(IsHairGrabbable()){
 			var collider = GrabbableHairCollider();
@@ -533,6 +552,10 @@ public class PlayerController : MonoBehaviour {
 	}
 
 	void DidPressDropThrough(){
+		if(playerState == PlayerState.YankingToothDown){
+			DidReleaseGrab();
+		}
+
 		dropThroughTime = dropThroughTimeTotal;
 	}
 
@@ -540,13 +563,21 @@ public class PlayerController : MonoBehaviour {
 		playerState = PlayerState.YankingToothDown;
 		toothJoint = gameObject.AddComponent<DistanceJoint2D>();
 		// toothJoint.frequency = botToothGrabSpringFrequency;
+
+		
+
 		var otherRigidBody2D = collider.GetComponentInParent<Rigidbody2D>();
 		toothJoint.connectedBody = otherRigidBody2D;
 		toothJoint.anchor = Vector2.zero;
 
+		// var otherY =  otherRigidBody2D.transform.position.y;
+		// if(transform.position.y <otherY){
+		// 	transform.position = new Vector3(transform.position.x, otherY + toothGrabDownRadius,0f);
+		// }
+
 		var worldGrabPoint = ToothGrabDownPosition();
 		var colliderRelativeGrabPoint = collider.transform.InverseTransformPoint(worldGrabPoint);
-		toothJoint.connectedAnchor = new Vector2(0f,colliderRelativeGrabPoint.y);
+		toothJoint.connectedAnchor = new Vector2(0f,0f);
 
 		toothJoint.maxDistanceOnly = true;
 		toothJoint.enableCollision = true;
@@ -564,18 +595,20 @@ public class PlayerController : MonoBehaviour {
 		// toothJoint.frequency = botToothGrabSpringFrequency;
 		var otherRigidBody2D = collider.GetComponentInParent<Rigidbody2D>();
 		toothJoint.connectedBody = otherRigidBody2D;
-		toothJoint.anchor = Vector2.zero;
+		toothJoint.anchor = Vector3.zero;//HairGrabPosition() - transform.position;
 
 		var worldGrabPoint = HairGrabPosition();
 		var colliderRelativeGrabPoint = collider.transform.InverseTransformPoint(worldGrabPoint);
-		toothJoint.connectedAnchor = new Vector2(0f,colliderRelativeGrabPoint.y);
+		toothJoint.connectedAnchor = new Vector2(0f,0f);
 
 		toothJoint.maxDistanceOnly = true;
+		// 
 		toothJoint.enableCollision = true;
 		// toothJoint.distance *= 1.05f;
 
 		targetYankTooth = collider.gameObject.GetComponentInParent<ToothBehaviour>();
 		toothJoint.autoConfigureDistance = false;
+		toothJoint.distance = toothUpGrabJointDistance;
 	}
 
 
@@ -604,6 +637,10 @@ public class PlayerController : MonoBehaviour {
 
 	Vector3 ToothGrabDownPosition(){
 		return transform.position + Vector3.down * toothGrabDownRadius;
+	}
+
+	Vector3 ToothGrabUpPosition(){
+		return transform.position + Vector3.up * yankToothUpCheckDistance;
 	}
 
 	void DestroyGrabJoint(){
@@ -744,6 +781,9 @@ public class PlayerController : MonoBehaviour {
 
 		Gizmos.color = Color.HSVToRGB(0.4f,0.7f,0.9f);
 		Gizmos.DrawWireSphere(TeethCarryPosition(),0.1f);
+
+		Gizmos.color = Color.HSVToRGB(0.65f,0.85f,0.9f);
+		Gizmos.DrawWireSphere(ToothGrabUpPosition(),0.1f);
 
 		Gizmos.color = Color.red;
 		Gizmos.DrawWireCube(Vector2.zero,screenBoundsSize);

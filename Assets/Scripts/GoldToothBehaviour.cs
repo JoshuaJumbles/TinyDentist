@@ -54,7 +54,10 @@ public class GoldToothBehaviour : MonoBehaviour {
 
 	void DidFindFit(){
 		var rb = GetComponent<Rigidbody2D>();
-		rb.constraints = RigidbodyConstraints2D.FreezeAll;
+		// rb.constraints = RigidbodyConstraints2D.FreezeAll;
+		rb.bodyType = RigidbodyType2D.Kinematic;
+		rb.velocity  = Vector3.zero;
+		rb.angularVelocity = 0f;
 		frontImage.sortingOrder = sortOrderOnLock;
 		backImage.sortingOrder = sortOrderOnLock - 1;
 		// var srList = GetComponentsInChildren<SpriteRenderer>();

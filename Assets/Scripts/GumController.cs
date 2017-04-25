@@ -41,25 +41,25 @@ public class GumController : MonoBehaviour {
 	void TeethBecameDeadly(){
 		// var player = GameObject.FindObjectOfType<PlayerController>();
 		player.TeethBecameDeadly(teeth);
-		var playerColliders = player.GetComponentsInChildren<Collider2D>();
-		foreach(ToothBehaviour tooth in teeth){
-			var collider = tooth.GetComponentInChildren<Collider2D>();
-			foreach(Collider2D playerCollider in playerColliders){
-				Physics2D.IgnoreCollision(playerCollider, collider,true);
-			}
+		// var playerColliders = player.GetComponentsInChildren<Collider2D>();
+		// foreach(ToothBehaviour tooth in teeth){
+		// 	var collider = tooth.GetComponentInChildren<Collider2D>();
+		// 	foreach(Collider2D playerCollider in playerColliders){
+		// 		Physics2D.IgnoreCollision(playerCollider, collider,true);
+		// 	}
 
-		}
+		// }
 	}
 
 	void TeethBecameSafe(){
 		var playerColliders = player.GetComponentsInChildren<Collider2D>();
-		foreach(ToothBehaviour tooth in teeth){
-			var collider = tooth.GetComponentInChildren<Collider2D>();
-			foreach(Collider2D playerCollider in playerColliders){
-				Physics2D.IgnoreCollision(playerCollider, collider,false);
-			}
+		// foreach(ToothBehaviour tooth in teeth){
+		// 	var collider = tooth.GetComponentInChildren<Collider2D>();
+		// 	foreach(Collider2D playerCollider in playerColliders){
+		// 		Physics2D.IgnoreCollision(playerCollider, collider,false);
+		// 	}
 
-		}
+		// }
 	}
 
 	public void GumSpotOpened(Transform gumPosition){
@@ -77,6 +77,8 @@ public class GumController : MonoBehaviour {
 		goldTooth.transform.parent = slot;
 		goldTooth.transform.localRotation = Quaternion.identity;
 		goldTooth.transform.localPosition = Vector3.zero;
+		var collider = goldTooth.GetComponentInChildren<Collider2D>();
+		collider.gameObject.layer = gameObject.layer;
 	}
 
 	void OnDrawGizmosSelected()

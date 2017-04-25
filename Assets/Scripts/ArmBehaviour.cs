@@ -35,6 +35,10 @@ public class ArmBehaviour : MonoBehaviour {
 	float retreatTimer;
 
 	GameManager gameManager;
+
+	public List<SpriteRenderer> skinSprites = new List<SpriteRenderer>();
+
+	GiantHeadBehaviour giantHead;
 	public virtual void Start () {
 		initialPosition = transform.position;
 		palmTransform.rotation = Quaternion.identity;
@@ -47,6 +51,12 @@ public class ArmBehaviour : MonoBehaviour {
 		}
 
 		retreatTimer = retreatSpeed;
+		giantHead = GameObject.FindObjectOfType<GiantHeadBehaviour>();
+		foreach(SpriteRenderer sprite in skinSprites){
+			sprite.color = giantHead.skinColor;
+		}
+
+		
 	}
 
 	public void SetupWithTarget(Vector3 target){
