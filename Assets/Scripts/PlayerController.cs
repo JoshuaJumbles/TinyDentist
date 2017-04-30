@@ -88,16 +88,20 @@ public class PlayerController : MonoBehaviour {
 	public GameObject respawnArmPrefab;
 	public float hairJumpBoost = 1.2f;
 
-	bool isGrabQueued = false;
+	public bool isGrabQueued = false;
 
-	float downGravityFactor = 1.1f;
+	public float downGravityFactor = 1.1f;
 	public float toothUpGrabJointDistance = 0.6f;
+
+	PlayerControlScheme controlScheme;
 
 	// public float upwardsVelocityForSideRejection = 0.2f;
 	void Start () {
 		Cursor.visible = false;
 		spriteBehaviour = GetComponent<PlayerSpriteBehaviour>();
 		rigidBody = GetComponent<Rigidbody2D>();
+
+		controlScheme = GetComponent<PlayerControlScheme>();
 	}
 	
 	// Update is called once per frame
@@ -126,58 +130,19 @@ public class PlayerController : MonoBehaviour {
 		}
 		// standCollider.gameObject.SetActive(useStandingCollider);
 
-		
+	
 		
 
 		standCollider.isTrigger = (!useStandingCollider);
 		rigidBody.constraints = (useStandingCollider) ? RigidbodyConstraints2D.FreezeRotation : RigidbodyConstraints2D.None;
 
-		Vector2 walkVector = Vector2.zero;
 
-		if(Input.GetKey(KeyCode.A)){
-			walkVector += Vector2.left;
-		}if (Input.GetKey(KeyCode.D)){
-			walkVector += Vector2.right;
-		}
+		//ControlScheme
 
-		// if(Input.GetKeyDown(KeyCode.R)){
-		// 	DidDie();
-		// }
-
-		if(walkVector.x != 0f || walkVector.y != 0f){
-			DidPressLateralMove(walkVector);
-		}else{
-			UpdateNoLateralMovement();
-		}
-
-		if(Input.GetKeyDown(KeyCode.W)){
-			DidPressJump();
-		}
-
-		if(Input.GetKey(KeyCode.S)){//IsGrounded() && Input.GetKeyDown(KeyCode.S)){
-			DidPressDropThrough();
-			
-		}
-		rigidBody.gravityScale = (Input.GetKey(KeyCode.S)) ?  downGravityFactor : 1f;
-
-		if(Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.LeftShift)){
-			if(playerState == PlayerState.CarryingToothAirborn || playerState == PlayerState.CarryingToothGrounded){
-				DidPressThrowTooth();
-			}else{
-				DidPressGrab();
-			}
-		}
+		controlScheme.InputUpdate();
 
 
-
-		if(Input.GetKeyUp(KeyCode.Space) || Input.GetKeyUp(KeyCode.LeftShift)){
-			isGrabQueued = false;
-			DidReleaseGrab();
-		}
-
-		if(isGrabQueued){
-			DidPressGrab();
-		}
+		
 
 		UpdatePlayerState();
 		
@@ -260,6 +225,10 @@ public class PlayerController : MonoBehaviour {
 		}
 
 
+	}
+
+	public bool IsDroppingThrough(){
+		return dropThroughTime > 0;
 	}
 
 	void UpdateIgnoredColliders(){
@@ -438,7 +407,7 @@ public class PlayerController : MonoBehaviour {
 	}
 
 
-	void DidPressLateralMove(Vector2 targetDirection){
+	public void DidPressLateralMove(Vector2 targetDirection){
 		//TODO: less abrupt turn
 		if(toothJoint == null && grabJoint == null){
 			if((rigidBody.velocity.x < 0 && targetDirection.x > 0) ||
@@ -459,11 +428,11 @@ public class PlayerController : MonoBehaviour {
 		rigidBody.velocity += speed * targetDirection * Time.deltaTime;
 	}
 
-	void UpdateNoLateralMovement(){
+	public void UpdateNoLateralMovement(){
 
 	}
 
-	void DidPressJump(){
+	public void DidPressJump(){
 		if(playerState != PlayerState.Airborn && playerState != PlayerState.CarryingToothAirborn){
 			DidReleaseGrab();
 			var jumpVel = initialJumpVelocity;
@@ -478,7 +447,7 @@ public class PlayerController : MonoBehaviour {
 		}
 	}
 
-	void DidPressThrowTooth(){
+	public void DidPressThrowTooth(){
 		var throwDirection = Vector3.up;
 		if(rigidBody.velocity.x < -throwToothXDeadZone){
 			throwDirection = Vector3.left + Vector3.up;
@@ -505,7 +474,45 @@ public class PlayerController : MonoBehaviour {
 		playerState = (IsGrounded())?PlayerState.Grounded : PlayerState.Airborn;
 	}
 
-	void DidPressGrab(){
+	public void DidPressGrabDown(){
+		if(dropThroughTime <= 0f){
+			var grabbableBotTeeth = GrabbableTeethOnBottom();
+			if(grabbableBotTeeth.Count >0){
+				CreateToothGrabDownJoint(grabbableBotTeeth[0]);
+				isGrabQueued = false;
+				return;
+			}
+		}
+	}
+
+	public void DidPressGrabUp(){
+		var grabbableGoldTeeth = GrabbableGoldTeeth();
+		if(grabbableGoldTeeth.Count > 0){
+			var goldToothBehaviour = grabbableGoldTeeth[0].GetComponentInParent<GoldToothBehaviour>();
+			goldToothBehaviour.toothState = ToothState.Carried;
+			DidGrabToothObject(grabbableGoldTeeth[0].gameObject);
+			isGrabQueued = false;
+			return;
+		}
+
+		var grabbableTopTeeth = GrabbableTeethOnTop();
+		if(grabbableTopTeeth.Count > 0){
+			CreateToothGrabUpJoint(grabbableTopTeeth[0]);
+			isGrabQueued = false;
+			return;
+		}
+
+		if(IsHairGrabbable()){
+			var collider = GrabbableHairCollider();
+			CreateHairGrabJoint(collider);
+			isGrabQueued = false;
+			return;
+		}
+
+		isGrabQueued = true;
+	}
+
+	public void DidPressGrabAll(){
 		var grabbableGoldTeeth = GrabbableGoldTeeth();
 		if(grabbableGoldTeeth.Count > 0){
 			var goldToothBehaviour = grabbableGoldTeeth[0].GetComponentInParent<GoldToothBehaviour>();
@@ -543,7 +550,8 @@ public class PlayerController : MonoBehaviour {
 		isGrabQueued = true;
 	}
 
-	void DidReleaseGrab(){
+	public void DidReleaseGrab(){
+		isGrabQueued = false;
 		if(grabJoint != null || toothJoint != null){
 			DestroyGrabJoint();
 		}
@@ -551,12 +559,19 @@ public class PlayerController : MonoBehaviour {
 		
 	}
 
-	void DidPressDropThrough(){
+	public void DidPressDropThrough(){
 		if(playerState == PlayerState.YankingToothDown){
 			DidReleaseGrab();
 		}
 
 		dropThroughTime = dropThroughTimeTotal;
+	}
+
+	public bool IsGrabbingTooth(){
+		return toothJoint != null;
+	}
+	public bool IsGrabbingHair(){
+		return grabJoint != null;
 	}
 
 	void CreateToothGrabDownJoint(Collider2D collider){

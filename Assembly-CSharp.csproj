@@ -56,6 +56,7 @@
      <Compile Include="Assets\Scripts\LerpMath.cs" />
      <Compile Include="Assets\Scripts\LerpUtility.cs" />
      <Compile Include="Assets\Scripts\Lerper.cs" />
+     <Compile Include="Assets\Scripts\PlayerControlScheme.cs" />
      <Compile Include="Assets\Scripts\PlayerController.cs" />
      <Compile Include="Assets\Scripts\PlayerSpriteBehaviour.cs" />
      <Compile Include="Assets\Scripts\RandomSkinColor.cs" />

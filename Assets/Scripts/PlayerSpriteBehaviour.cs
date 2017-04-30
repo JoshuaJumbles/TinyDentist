@@ -13,6 +13,7 @@ public class PlayerSpriteBehaviour : MonoBehaviour {
 	public List<Sprite> grabOnSprites = new List<Sprite>();
 	public List<Sprite> carrySprites = new List<Sprite>();
 	public List<Sprite> carryJumpSprites = new List<Sprite>();
+	public List<Sprite> diveSprites = new List<Sprite>();
 
 	public List<Sprite> yankingSprites = new List<Sprite>();
 	
@@ -39,6 +40,8 @@ public class PlayerSpriteBehaviour : MonoBehaviour {
 	public float targetDeathScale = 3f;
 	public float deathScaleLerpTime = 5f;
 	VectorLerper deathScaleLerper;
+
+	public float jumpLateralThreshold = 0f;
 	// Use this for initialization
 	void Start () {
 		playerController = GetComponent<PlayerController>();
@@ -117,24 +120,36 @@ public class PlayerSpriteBehaviour : MonoBehaviour {
 			lastAirTimeTheta = theta;
 		}
 		bodyRenderer.sprite = airTimeSprites[Random.Range(0,airTimeSprites.Count)];
-		if(vel.x == 0f){
-			bodyRenderer.sprite = rollSprites[Random.Range(0,rollSprites.Count)];
+		if(Mathf.Abs(rigidBody.velocity.x) <= 0f){
+			// bodyRenderer.sprite = rollSprites[Random.Range(0,rollSprites.Count)];
 		}
+
+		
 	
 		var displayTheta = Mathf.MoveTowardsAngle(lastAirTimeTheta, theta,airTurnSpeed * Time.deltaTime);
 		lastAirTimeTheta = theta;
 		//lastAirTimeTheta * (1f- airTimeMixFilter) + theta * airTimeMixFilter;
-		var isFlipped = (vel.x>0f);
+		var isFlipped = (vel.x>=0f);
 		if(!isFlipped){
 			displayTheta += 180f;
 		}
 
+		if(playerController.IsDroppingThrough() && rigidBody.velocity.y <0f){
+			// displayTheta -= 90f;
+			// if(isFlipped){
+			// 	displayTheta += 180f;
+			// }
+			bodyRenderer.sprite = diveSprites[Random.Range(0,diveSprites.Count)];
+		}
+
 		graphicsRoot.transform.rotation = Quaternion.AngleAxis(displayTheta,Vector3.forward);
 
-		if(Mathf.Abs(rigidBody.velocity.x) > turnSpeedThreshold){				
-			var scaleX = ((isFlipped)? -1f : 1f);
-			graphicsRoot.transform.localScale = new Vector2(scaleX,1f);
-		}
+		// if(Mathf.Abs(rigidBody.velocity.x) > turnSpeedThreshold){				
+		// 	
+			
+		// }
+		var scaleX = ((isFlipped)? -1f : 1f);
+		graphicsRoot.transform.localScale = new Vector2(scaleX,1f);
 	}
 
 	void UpdateCarryingAirbornGraphics(){
