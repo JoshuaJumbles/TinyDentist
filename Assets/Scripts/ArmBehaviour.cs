@@ -39,7 +39,17 @@ public class ArmBehaviour : MonoBehaviour {
 	public List<SpriteRenderer> skinSprites = new List<SpriteRenderer>();
 
 	GiantHeadBehaviour giantHead;
+
+	Rigidbody2D rb;
+
+	public Color selectedColor;
 	public virtual void Start () {
+		rb = GetComponent<Rigidbody2D>();
+		rb.simulated = false;
+		// var colliders = GetComponentsInChildren<Collider2D>();
+		// foreach(Collider2D collider in colliders){
+		// 	collider.gameObject.SetActive(false);
+		// }
 		initialPosition = transform.position;
 		palmTransform.rotation = Quaternion.identity;
 
@@ -51,12 +61,22 @@ public class ArmBehaviour : MonoBehaviour {
 		}
 
 		retreatTimer = retreatSpeed;
-		giantHead = GameObject.FindObjectOfType<GiantHeadBehaviour>();
-		foreach(SpriteRenderer sprite in skinSprites){
-			sprite.color = giantHead.skinColor;
+		if(selectedColor == null || selectedColor.a == 0){
+			giantHead = GameObject.FindObjectOfType<GiantHeadBehaviour>();
+			SetColor(giantHead.skinColor);
+			
+		}else{
+			SetColor(selectedColor);
 		}
+		
 
 		
+	}
+
+	public void SetColor(Color color){
+		foreach(SpriteRenderer sprite in skinSprites){
+			sprite.color = color;
+		}
 	}
 
 	public void SetupWithTarget(Vector3 target){
@@ -107,11 +127,15 @@ public class ArmBehaviour : MonoBehaviour {
 	}
 
 	void OpenHand(){
-
+		rb.simulated = true;
+		// var colliders = GetComponentsInChildren<Collider2D>();
+		// foreach(Collider2D collider in colliders){
+		// 	collider.gameObject.SetActive(true);
+		// }
 		var obj = SpawnedObject();
 		obj.transform.position = transform.position + Vector3.up * spawnDispY;
-		var rb = obj.GetComponent<Rigidbody2D>();
-		rb.AddForce(Vector2.up * popUpForce,ForceMode2D.Impulse);
+		var objRb = obj.GetComponent<Rigidbody2D>();
+		objRb.AddForce(Vector2.up * popUpForce,ForceMode2D.Impulse);
 
 		
 

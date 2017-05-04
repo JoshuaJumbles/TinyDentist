@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public enum ToothState{
-	Anchored, Carried, Free
+	Anchored, BeingYanked, Carried, Free
 }
 public class ToothBehaviour : MonoBehaviour {
 	public bool isLooseTooth = false;
@@ -14,9 +14,11 @@ public class ToothBehaviour : MonoBehaviour {
 
 	public float warningRadius = 2f;
 
-	PlayerController playerController;
+	List<PlayerController> playerControllers = new List<PlayerController>();
+	PlayerController yankingPlayer;
 
 	public float randomLooseChance = 0.15f;
+	public float multiplayerRandomLooseChance = 0.35f;
 	public float yankTimeLooseTotal = 1.75f;
 	public float yankTimeToughTotal = 6f;
 	float yankTime = 0f;
@@ -50,17 +52,26 @@ public class ToothBehaviour : MonoBehaviour {
 	
 	void Start () {
 		head = GameObject.FindObjectOfType<GiantHeadBehaviour>();
-		playerController = GameObject.FindObjectOfType<PlayerController>();
+		// playerController = GameObject.FindObjectOfType<PlayerController>();
 		manager = GameObject.FindObjectOfType<GameManager>();
 		rigidBody = GetComponent<Rigidbody2D>();
 
 		gumController = GetComponentInParent<GumController>();
 		armManager = GameObject.FindObjectOfType<ArmManager>();
 
-		if(GameManager.looseTeeth < GameManager.maxLooseTeeth && Random.value<=randomLooseChance){
+		var looseTeethMax = (manager.useMultiplayerSetup) ? GameManager.multiplayerMaxLooseTeeth : GameManager.maxLooseTeeth;
+		var looseChance = (manager.useMultiplayerSetup) ?  multiplayerRandomLooseChance:randomLooseChance;
+		if(GameManager.looseTeeth < looseTeethMax && Random.value<=looseChance){
 			isLooseTooth = true;
 			GameManager.looseTeeth += 1;
 		}
+	}
+	public bool IsGrabbable(){
+		return yankingPlayer == null && toothState == ToothState.Anchored;
+	}
+
+	public void DidStartGame(){
+		playerControllers = new List<PlayerController> (GameObject.FindObjectsOfType<PlayerController>());
 	}
 
 	void Update(){
@@ -80,26 +91,36 @@ public class ToothBehaviour : MonoBehaviour {
 
 	void UpdateAnchored(){
 		if(isLooseTooth){
-			if(playerController == null){
-				playerController = GameObject.FindObjectOfType<PlayerController>();
-				if(playerController == null){
+			foreach(PlayerController playerController in playerControllers){
+				var disp = playerController.transform.position - transform.position;
+				var withinRad = disp.sqrMagnitude < warningRadius * warningRadius;
+				animator.SetBool("IsWarningLoose",withinRad);
+				if(withinRad == true){
 					return;
 				}
 			}
-			var disp = playerController.transform.position - transform.position;
-			var withinRad = disp.sqrMagnitude < warningRadius * warningRadius;
-			animator.SetBool("IsWarningLoose",withinRad);
 		}
 	}
 
 	void UpdateCarried(){
 
-		transform.position = playerController.TeethCarryPosition();
+		transform.position = yankingPlayer.TeethCarryPosition();
+		rigidBody.angularVelocity = 0;
 	}
 
 	void UpdateFree(){
 		//boundscheck
 		//goal check
+	}
+
+	public void PlayerStartedYanking(PlayerController player){
+		yankingPlayer = player;
+	}
+	public void PlayerReleasedYanking(){
+		if(toothState != ToothState.Carried){
+			yankingPlayer = null;	
+		}
+		
 	}
 
 	public void PlayerDidYank(){
@@ -111,6 +132,8 @@ public class ToothBehaviour : MonoBehaviour {
 		}
 	}
 
+	
+
 	void DidYankOut(){
 
 		animator.SetBool("IsWarningLoose",false);
@@ -119,13 +142,15 @@ public class ToothBehaviour : MonoBehaviour {
 		head.angerLevel += ((isLooseTooth) ? looseAngerYank : toughAngerYank);
 		gumController.GumSpotOpened(transform);
 
-		playerController.DidGrabToothObject(gameObject);
 		toothState = ToothState.Carried;
+
+		yankingPlayer.DidGrabToothObject(gameObject);
+		
 
 		
 		rigidBody.constraints = RigidbodyConstraints2D.None;
 
-		transform.position = playerController.TeethCarryPosition();
+		transform.position = yankingPlayer.TeethCarryPosition();
 
 		toothFront.sortingOrder = carrySortOrderFront;
 		toothBack.sortingOrder = carrySortOrderBack;
@@ -135,9 +160,11 @@ public class ToothBehaviour : MonoBehaviour {
 		transform.rotation = Quaternion.AngleAxis(newRot,Vector3.forward);
 
 		
+		
 	}
 
 	public void ThrowToothInDirection(Vector2 forceVector){
+		yankingPlayer = null;
 		rigidBody.bodyType = RigidbodyType2D.Dynamic;
 		toothState = ToothState.Free;
 		rigidBody.velocity = Vector3.zero;

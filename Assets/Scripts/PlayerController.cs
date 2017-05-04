@@ -6,9 +6,11 @@ public enum PlayerState{
 	Grounded,Airborn,HoldingHair,CarryingToothGrounded,
 	CarryingToothAirborn,YankingToothDown,YankingToothUp,
 
+
 	KnockedOut
 }
 public class PlayerController : MonoBehaviour {
+	public bool isMultiplayerEnabled = false;
 	public PlayerState playerState = PlayerState.Airborn;
 	public PlayerState lastFramePlayerState = PlayerState.Airborn;
 	// public float groundMinSpeedX = 1f;
@@ -63,6 +65,7 @@ public class PlayerController : MonoBehaviour {
 	GameObject carryObject;
 	public float throwToothMinForce = 0.5f;
 	public float throwToothSpeedFactor = 0.3f;
+	public float minThrowLateralSpeed = 0.5f;
 
 	public float hairGrabSpringFrequency = 4f;
 	public float botToothGrabSpringFrequency = 6f;
@@ -86,6 +89,7 @@ public class PlayerController : MonoBehaviour {
 	bool isInBounds = true;
 
 	public GameObject respawnArmPrefab;
+	public GameObject respawnArmRoot;
 	public float hairJumpBoost = 1.2f;
 
 	public bool isGrabQueued = false;
@@ -181,6 +185,20 @@ public class PlayerController : MonoBehaviour {
 		rollCollider.gameObject.SetActive(true);
 		standCollider.gameObject.SetActive(true);
 		var respawnArm = GameObject.Instantiate(respawnArmPrefab);
+		var armBehaviour = respawnArm.GetComponent<RespawnArmBehaviour>();
+		armBehaviour.player = this;
+		if(respawnArmRoot != null){
+			armBehaviour.transform.position = respawnArmRoot.transform.position;
+		}
+		if(isMultiplayerEnabled){
+			float h,s,v;
+			var col = spriteBehaviour.bodyRenderer.color;
+			Color.RGBToHSV(col,out h, out s, out v);
+			var newCol = Color.HSVToRGB(h,s * 0.5f,v);
+
+			armBehaviour.selectedColor = newCol;
+		}
+		
 	}
 
 	public void DidPopOutFromRespawn(){
@@ -318,13 +336,14 @@ public class PlayerController : MonoBehaviour {
 					DidDie();
 					return;
 				}
-				if(LayerMask.LayerToName(collider.gameObject.layer) == "TeethTop"){
+				var layerName = LayerMask.LayerToName(collider.gameObject.layer);
+				if( layerName == "TeethTop"){
 					if( collider.OverlapPoint(ToothGrabUpPosition())){
 						DidDie();
 						return;
 					}
 				}
-				if(LayerMask.LayerToName(collider.gameObject.layer) == "Ground"){
+				if(layerName  == "Ground"){
 					if( collider.OverlapPoint(ToothGrabDownPosition())){
 						DidDie();
 						return;
@@ -367,7 +386,10 @@ public class PlayerController : MonoBehaviour {
 		var resultList = new List<Collider2D>();
 		foreach(Collider2D collider in colliderList){
 			if(collider.gameObject.tag == "botTeeth"){
-				resultList.Add(collider);
+				var toothBehaviour = collider.GetComponentInParent<ToothBehaviour>();
+				if(toothBehaviour.IsGrabbable()){
+					resultList.Add(collider);
+				}
 			}
 		}
 
@@ -384,10 +406,14 @@ public class PlayerController : MonoBehaviour {
 		var resultList = new List<Collider2D>();
 		foreach(Collider2D collider in colliderList){
 			if(collider.gameObject.tag == "goldTeeth"){
+
 				var goldToothBehaviour = collider.gameObject.GetComponentInParent<GoldToothBehaviour>();
-				if(goldToothBehaviour != null && goldToothBehaviour.toothState == ToothState.Free){
-					resultList.Add(collider);
-				}				
+				if(goldToothBehaviour.yankingPlayer == null){
+					goldToothBehaviour.yankingPlayer = this;
+					if(goldToothBehaviour != null && goldToothBehaviour.toothState == ToothState.Free){
+						resultList.Add(collider);
+					}	
+				}
 			}
 		}
 
@@ -395,8 +421,18 @@ public class PlayerController : MonoBehaviour {
 	}
 
 	public List<Collider2D> GrabbableTeethOnTop(){
+		var resultList = new List<Collider2D>();
+
 		var colliderList =  new List<Collider2D>(Physics2D.OverlapPointAll(HairGrabPosition(),topTeethMask,-100,100));
 		colliderList.AddRange(Physics2D.OverlapPointAll(ToothGrabUpPosition(),topTeethMask,-100,100));
+		foreach(Collider2D collider in colliderList){
+			var toothBehaviour = collider.GetComponentInParent<ToothBehaviour>();
+			if(toothBehaviour == null){//goldTooth
+				resultList.Add(collider);
+			}else if(toothBehaviour.IsGrabbable()){
+				resultList.Add(collider);
+			}
+		}
 		return colliderList;
 	}
 
@@ -461,13 +497,12 @@ public class PlayerController : MonoBehaviour {
 		var forceVector = throwDirection.normalized * (throwToothMinForce + vel3.magnitude * throwToothSpeedFactor);
 							// + throwToothMinForce * throwDirection;
 		var toothBehaviour = carryObject.GetComponent<ToothBehaviour>();
+		var goldToothBehaviour = carryObject.GetComponentInParent<GoldToothBehaviour>();
+		// var playerBehaviour = carryObject.GetComponentInParent<PlayerController>();
 		if(toothBehaviour != null){
 			toothBehaviour.ThrowToothInDirection(forceVector);
-		}else{
-			var goldToothBehaviour = carryObject.GetComponentInParent<GoldToothBehaviour>();
-			if(goldToothBehaviour != null){
-				goldToothBehaviour.ThrowToothInDirection(forceVector);
-			}
+		}else if(goldToothBehaviour != null){	
+			goldToothBehaviour.ThrowToothInDirection(forceVector);
 		}
 		
 		carryObject = null;
@@ -479,6 +514,8 @@ public class PlayerController : MonoBehaviour {
 			var grabbableBotTeeth = GrabbableTeethOnBottom();
 			if(grabbableBotTeeth.Count >0){
 				CreateToothGrabDownJoint(grabbableBotTeeth[0]);
+				var toothBehaviour = grabbableBotTeeth[0].GetComponentInParent<ToothBehaviour>();
+				toothBehaviour.PlayerStartedYanking(this);
 				isGrabQueued = false;
 				return;
 			}
@@ -525,6 +562,10 @@ public class PlayerController : MonoBehaviour {
 		var grabbableTopTeeth = GrabbableTeethOnTop();
 		if(grabbableTopTeeth.Count > 0){
 			CreateToothGrabUpJoint(grabbableTopTeeth[0]);
+				var toothBehaviour = grabbableTopTeeth[0].GetComponentInParent<ToothBehaviour>();
+				if(toothBehaviour != null){
+					toothBehaviour.PlayerStartedYanking(this);
+				}
 			isGrabQueued = false;
 			return;
 		}
@@ -533,6 +574,8 @@ public class PlayerController : MonoBehaviour {
 			var grabbableBotTeeth = GrabbableTeethOnBottom();
 			if(grabbableBotTeeth.Count >0){
 				CreateToothGrabDownJoint(grabbableBotTeeth[0]);
+				var toothBehaviour = grabbableBotTeeth[0].GetComponentInParent<ToothBehaviour>();
+				toothBehaviour.PlayerStartedYanking(this);
 				isGrabQueued = false;
 				return;
 			}
@@ -665,6 +708,10 @@ public class PlayerController : MonoBehaviour {
 		}
 
 		if(toothJoint != null){
+			var toothBehaviour = toothJoint.connectedBody.GetComponent<ToothBehaviour>();
+			if(toothBehaviour != null && toothBehaviour.toothState != ToothState.Carried){
+				toothBehaviour.PlayerReleasedYanking();
+			}
 			Destroy(toothJoint);
 		}
 		
@@ -713,7 +760,9 @@ public class PlayerController : MonoBehaviour {
 			dispY = Mathf.Sin(adjustedAngle * Mathf.Deg2Rad);
 			vect = new Vector3(dispX,dispY,0f) * length;
 			pt = transform.position + vect;
-			pt += new Vector3(rigidBody.velocity.x,rigidBody.velocity.y,0f) * Time.smoothDeltaTime;
+			if(rigidBody != null){
+				pt += new Vector3(rigidBody.velocity.x,rigidBody.velocity.y,0f) * Time.smoothDeltaTime;
+			}
 			checkPoints.Add(pt);
 
 			var flippedAngle = baseAngle - testAngle;
@@ -721,7 +770,9 @@ public class PlayerController : MonoBehaviour {
 			dispY = Mathf.Sin(flippedAngle * Mathf.Deg2Rad);
 			vect = new Vector3(dispX,dispY,0f) * length;
 			pt = transform.position + vect;
-			pt += new Vector3(rigidBody.velocity.x,rigidBody.velocity.y,0f) * Time.smoothDeltaTime;
+			if(rigidBody != null){
+				pt += new Vector3(rigidBody.velocity.x,rigidBody.velocity.y,0f) * Time.smoothDeltaTime;
+			}
 			checkPoints.Add(pt);
 		}
 

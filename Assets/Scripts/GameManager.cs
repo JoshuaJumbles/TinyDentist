@@ -5,16 +5,19 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public enum GameState{
-	Intro,Game,Win,Lose
+	Intro,MultiplayerSetup,Game,Win,Lose
 }
 
 
 public class GameManager : MonoBehaviour {
 	public static int maxLooseTeeth = 7;
+	public static int multiplayerMaxLooseTeeth = 15;
 	public static int looseTeeth = 0;
 	public GameState gameState = GameState.Intro;
 
+	public bool useMultiplayerSetup = false;
 	public GameObject intro;
+	public GameObject multiplayerSetup;
 	public GameObject game;
 	public GameObject win;
 	public GameObject lose;
@@ -38,8 +41,14 @@ public class GameManager : MonoBehaviour {
 	float inputDelay = 0f;
 
 	GiantHeadBehaviour head;
+
+	public string singlePlayerLevelName = "demoScene";
+	public string multiPlayerLevelName = "MultiplayerScene";
 	// Use this for initialization
 	void Start () {
+		if(multiplayerSetup){
+
+		}
 		playerController = GameObject.FindObjectOfType<PlayerController>();
 		teethList = new List<ToothBehaviour>(GameObject.FindObjectsOfType<ToothBehaviour>());
 		var arm = spawnArmPrefab.GetComponent<ArmBehaviour>();
@@ -52,6 +61,21 @@ public class GameManager : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
+		if(Input.GetKeyDown(KeyCode.R)){
+			SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+		}
+		if(Input.GetKeyDown(KeyCode.Alpha1)){
+			SceneManager.LoadScene(singlePlayerLevelName);
+		}
+		if(Input.GetKeyDown(KeyCode.Alpha2)){
+			SceneManager.LoadScene(multiPlayerLevelName);
+		}
+
+		if(Input.GetKeyDown(KeyCode.R)){
+			SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+		}
+
+
 		UpdateSceneState();
 		UpdateForState();
 	}
@@ -60,11 +84,19 @@ public class GameManager : MonoBehaviour {
 		inputDelay -= Time.deltaTime;
 		switch(gameState){
 			case GameState.Intro:
-				var rigidBody = playerController.GetComponent<Rigidbody2D>();
-				rigidBody.simulated = false;
-				playerController.transform.position = playerIntroLockPt.position;
+				if(!useMultiplayerSetup){
+					var rigidBody = playerController.GetComponent<Rigidbody2D>();
+					rigidBody.simulated = false;
+					playerController.transform.position = playerIntroLockPt.position;
+				}
+				
 				if(inputDelay <= 0f && Input.anyKeyDown){
-					StartGame();
+					if(useMultiplayerSetup){
+						gameState = GameState.MultiplayerSetup;
+					}else{
+						StartGame();
+					}
+						
 				}
 				break;
 			case GameState.Game:
@@ -99,12 +131,27 @@ public class GameManager : MonoBehaviour {
 		}
 	}
 
-	void StartGame(){
-		var rigidBody = playerController.GetComponent<Rigidbody2D>();
-		rigidBody.simulated = true;
-
+	public void StartGame(){
+		if(!useMultiplayerSetup){
+			var rigidBody = playerController.GetComponent<Rigidbody2D>();
+			rigidBody.simulated = true;
+		}
+		
+		NotifyGameStart();
 		gameState = GameState.Game;
 		// GameObject.Instantiate(spawnArmPrefab);
+	}
+
+	void NotifyGameStart(){
+		var gums = GameObject.FindObjectsOfType<GumController>();
+		foreach(GumController gum in gums){
+			gum.DidStartGame();
+		}
+
+		var teeth = GameObject.FindObjectsOfType<ToothBehaviour>();
+		foreach(ToothBehaviour tooth in teeth){
+			tooth.DidStartGame();
+		}
 	}
 
 	void CheckForGameEnd(){
@@ -164,6 +211,10 @@ public class GameManager : MonoBehaviour {
 
 	void UpdateSceneState(){
 		intro.SetActive(gameState == GameState.Intro);
+		if(useMultiplayerSetup){
+			multiplayerSetup.SetActive(gameState == GameState.MultiplayerSetup);
+		}
+		
 		game.SetActive(gameState == GameState.Game || 
 						gameState == GameState.Lose || 
 						gameState == GameState.Win);

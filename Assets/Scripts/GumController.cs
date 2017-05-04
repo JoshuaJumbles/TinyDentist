@@ -15,11 +15,15 @@ public class GumController : MonoBehaviour {
 	bool lastDeadlyState = false;
 	public bool areTeethDeadly = false;
 
-	PlayerController player;
+	List<PlayerController> players;
 	void Start () {
-		player = GameObject.FindObjectOfType<PlayerController>();
+		
 		teeth = new List<ToothBehaviour>( GetComponentsInChildren<ToothBehaviour>());
 
+	}
+
+	public void DidStartGame(){
+		players = new List<PlayerController> (GameObject.FindObjectsOfType<PlayerController>());
 	}
 	
 	// Update is called once per frame
@@ -40,7 +44,10 @@ public class GumController : MonoBehaviour {
 
 	void TeethBecameDeadly(){
 		// var player = GameObject.FindObjectOfType<PlayerController>();
-		player.TeethBecameDeadly(teeth);
+		foreach (PlayerController player in players){
+			player.TeethBecameDeadly(teeth);
+		}
+		
 		// var playerColliders = player.GetComponentsInChildren<Collider2D>();
 		// foreach(ToothBehaviour tooth in teeth){
 		// 	var collider = tooth.GetComponentInChildren<Collider2D>();
@@ -52,14 +59,7 @@ public class GumController : MonoBehaviour {
 	}
 
 	void TeethBecameSafe(){
-		var playerColliders = player.GetComponentsInChildren<Collider2D>();
-		// foreach(ToothBehaviour tooth in teeth){
-		// 	var collider = tooth.GetComponentInChildren<Collider2D>();
-		// 	foreach(Collider2D playerCollider in playerColliders){
-		// 		Physics2D.IgnoreCollision(playerCollider, collider,false);
-		// 	}
-
-		// }
+	
 	}
 
 	public void GumSpotOpened(Transform gumPosition){

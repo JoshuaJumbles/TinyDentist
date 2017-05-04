@@ -4,10 +4,10 @@ using UnityEngine;
 
 public class RespawnArmBehaviour : ArmBehaviour {
 
-	PlayerController player;
+	public PlayerController player;
 	
 	public override void Start(){
-		player = GameObject.FindObjectOfType<PlayerController>();
+		// player = GameObject.FindObjectOfType<PlayerController>();
 		
 
 		base.Start();

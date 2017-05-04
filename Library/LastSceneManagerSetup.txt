@@ -1,4 +1,4 @@
 sceneSetups:
-- path: Assets/demoScene.unity
+- path: Assets/MultiplayerScene.unity
   isLoaded: 1
   isActive: 1
