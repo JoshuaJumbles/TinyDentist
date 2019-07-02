@@ -1,9 +1,9 @@
+﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2008
-
-Project("{75A9F45C-2685-23C6-FB9C-10032FB9397A}") = "TinyDentist", "Assembly-CSharp.csproj", "{B0F66E7A-3F94-7F91-B6BB-371C2BB3E32A}"
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyDentist", "Assembly-CSharp.csproj", "{B0F66E7A-3F94-7F91-B6BB-371C2BB3E32A}"
 EndProject
-Project("{75A9F45C-2685-23C6-FB9C-10032FB9397A}") = "TinyDentist", "Assembly-CSharp-Editor.csproj", "{6AA19E6E-2791-760A-21D7-C9D5CEA01EA3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyDentist", "Assembly-CSharp-Editor.csproj", "{6AA19E6E-2791-760A-21D7-C9D5CEA01EA3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
